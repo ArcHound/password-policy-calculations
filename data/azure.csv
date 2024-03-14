@@ -1,0 +1,13 @@
+sku,device,price,time unit
+Standard_NC6s_v3,V100,0.3366,1 Hour
+Standard_NC12s_v3,V100,0.3366,1 Hour
+Standard_NC24s_v3,V100,0.3366,1 Hour
+Standard_NC4as_T4_v3,T4,0.0526,1 Hour
+Standard_NC8as_T4_v3,T4,0.0752,1 Hour
+Standard_NC16as_T4_v3,T4,0.1204,1 Hour
+Standard_NC64as_T4_v3,T4,0.1088,1 Hour
+Standard_NC24ads_A100_v4,A100,0.735,1 Hour
+Standard_NC48ads_A100_v4,A100,0.7345,1 Hour
+Standard_NC96ads_A100_v4,A100,0.7345,1 Hour
+Standard_ND96asr_v4,A100,0.679875,1 Hour
+Standard_ND96amsr_A100_v4,A100,0.499906375,1 Hour

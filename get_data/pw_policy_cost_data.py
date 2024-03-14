@@ -9,6 +9,7 @@ import time
 import math
 from functools import update_wrapper
 from ohc import OHCScraper
+from azure import AzureScraper
 import cProfile
 import pstats
 
@@ -66,6 +67,14 @@ def time_decorator(f):
         
     return update_wrapper(new_func, f)
 
+def normalize_device(device):
+    # hack for card searching
+    suffix = device.split('-')[0].split(' ')[-1] 
+    if suffix != 'Ti':
+        return suffix
+    else:
+        return device.split('-')[0].split(' ')[-2] + ' Ti' 
+
 
 @click.command()
 @click.option(
@@ -75,11 +84,10 @@ def time_decorator(f):
     default="../data/benchmark.csv",
 )
 @click.option(
-    "--ohc-url",
-    type=str,
-    envvar="OHC_URL",
-    default="https://onlinehashcrack.com",
-    help="Base URL for ohc",
+    "--azure-output-file",
+    help="Output file",
+    type=click.Path(readable=True, file_okay=True, dir_okay=False),
+    default="../data/azure.csv",
 )
 @click.option(
     "--proxy",
@@ -105,7 +113,7 @@ def time_decorator(f):
 @time_decorator
 def main(
         benchmark_output_file,
-        ohc_url,
+        azure_output_file,
         proxy,
         proxy_address,
         log_level):
@@ -115,16 +123,29 @@ def main(
     # ======================================================================
     proxies = {"http": proxy_address, "https": proxy_address}
 
-    ohc = OHCScraper(ohc_url, proxy, proxies)
+    ohc = OHCScraper(proxy, proxies)
     data = ohc.crawl()
+    cards = set()
 
     with click.open_file(benchmark_output_file, "w") as f:
         headers = ["device", "hashmode", "speed"]
         writer = csv.writer(f)
         writer.writerow(headers)
         for dev, value in data.items():
+            dev = normalize_device(dev)
+            cards.add(dev)
             for hashmode, speed in value.items():
                 writer.writerow([dev, hashmode, speed])
+
+    log.info(f"I've got these cards: {cards}")
+    azure = AzureScraper(proxy, proxies, cards)
+    azure_data = azure.crawl()
+    with click.open_file(azure_output_file, "w") as f:
+        headers = ["sku", "device", "price", "time unit"]
+        writer = csv.writer(f)
+        writer.writerow(headers)
+        for row in azure_data:
+            writer.writerow([row['sku'], row['gpu_type'], row['price'], row['unit']])
     return 0
 
 

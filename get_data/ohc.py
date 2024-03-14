@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 log = logging.getLogger('pwpolicylogger')
 
 class OHCScraper:
-    def __init__(self, base_url, proxy, proxies, cache_name="ohc_cache", backend="sqlite"):
+    def __init__(self, proxy, proxies, base_url="https://onlinehashcrack.com", cache_name="ohc_cache", backend="sqlite"):
         log.info("Init service onlinehashcrack session...")
         self.base_url = base_url
         self.ohc_session = CachedSession(cache_name=cache_name, backend=backend, cache_control=False, expire_after=timedelta(days=1))
