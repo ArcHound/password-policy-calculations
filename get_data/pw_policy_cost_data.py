@@ -17,8 +17,6 @@ from dotenv import load_dotenv
 import requests
 import requests_cache
 
-requests_cache.install_cache(cache_name="pw_policy_cost_data_requests_cache", backend="sqlite", expire_after=10800)
-
 load_dotenv()
 
 logging.basicConfig(
