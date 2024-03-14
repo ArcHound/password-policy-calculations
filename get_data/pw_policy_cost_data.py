@@ -25,15 +25,15 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[logging.StreamHandler()],
 )
-log = logging.getLogger('pwpolicylogger')
+log = logging.getLogger("pwpolicylogger")
 
 
 log_levels = {
-        "DEBUG": logging.DEBUG,
-        "INFO": logging.INFO,
-        "WARNING": logging.WARNING,
-        "ERROR": logging.ERROR,
-        "CRITICAL": logging.CRITICAL,
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR,
+    "CRITICAL": logging.CRITICAL,
 }
 
 
@@ -42,7 +42,7 @@ def log_decorator(f):
     def new_func(ctx, *args, **kwargs):
         log.setLevel(log_levels[ctx.params["log_level"]])
         log.info("Starting")
-        r =  ctx.invoke(f,  *args, **kwargs)
+        r = ctx.invoke(f, *args, **kwargs)
         log.info("Finishing")
         return r
 
@@ -60,20 +60,21 @@ def time_decorator(f):
             raise e
         finally:
             t2 = time.perf_counter()
-            mins = math.floor(t2-t1) // 60
+            mins = math.floor(t2 - t1) // 60
             hours = mins // 60
-            secs = (t2-t1) - 60 * mins - 3600 * hours
+            secs = (t2 - t1) - 60 * mins - 3600 * hours
             log.info(f"Execution in {hours:02d}:{mins:02d}:{secs:0.4f}")
-        
+
     return update_wrapper(new_func, f)
+
 
 def normalize_device(device):
     # hack for card searching
-    suffix = device.split('-')[0].split(' ')[-1] 
-    if suffix != 'Ti':
+    suffix = device.split("-")[0].split(" ")[-1]
+    if suffix != "Ti":
         return suffix
     else:
-        return device.split('-')[0].split(' ')[-2] + ' Ti' 
+        return device.split("-")[0].split(" ")[-2] + " Ti"
 
 
 @click.command()
@@ -107,16 +108,11 @@ def normalize_device(device):
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     show_default=True,
     help="Set logging level.",
-    envvar="LOG_LEVEL"
+    envvar="LOG_LEVEL",
 )
 @log_decorator
 @time_decorator
-def main(
-        benchmark_output_file,
-        azure_output_file,
-        proxy,
-        proxy_address,
-        log_level):
+def main(benchmark_output_file, azure_output_file, proxy, proxy_address, log_level):
     """Console script for pw_policy_cost_data."""
     # ======================================================================
     #                        Your script starts here!
@@ -145,7 +141,7 @@ def main(
         writer = csv.writer(f)
         writer.writerow(headers)
         for row in azure_data:
-            writer.writerow([row['sku'], row['gpu_type'], row['price'], row['unit']])
+            writer.writerow([row["sku"], row["gpu_type"], row["price"], row["unit"]])
     return 0
 
 
