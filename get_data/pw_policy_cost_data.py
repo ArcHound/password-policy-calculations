@@ -8,8 +8,9 @@ import sys
 import time
 import math
 from functools import update_wrapper
-from ohc import OHCScraper
+from benchmarks import OHCScraper, GistScraper, consolidate_stats
 from azure import AzureScraper
+from utils import normalize_device
 import cProfile
 import pstats
 
@@ -68,15 +69,6 @@ def time_decorator(f):
     return update_wrapper(new_func, f)
 
 
-def normalize_device(device):
-    # hack for card searching
-    suffix = device.split("-")[0].split(" ")[-1]
-    if suffix != "Ti":
-        return suffix
-    else:
-        return device.split("-")[0].split(" ")[-2] + " Ti"
-
-
 @click.command()
 @click.option(
     "--benchmark-output-file",
@@ -120,20 +112,29 @@ def main(benchmark_output_file, azure_output_file, proxy, proxy_address, log_lev
     proxies = {"http": proxy_address, "https": proxy_address}
 
     ohc = OHCScraper(proxy, proxies)
-    data = ohc.crawl()
-    cards = set()
+    gists = GistScraper(proxy, proxies)
+    data_ohc = ohc.crawl()
+    data_gists = gists.crawl()
 
+    # checkpoint here, we can consolidate devs later
     with click.open_file(benchmark_output_file, "w") as f:
         headers = ["device", "hashmode", "speed"]
         writer = csv.writer(f)
         writer.writerow(headers)
-        for dev, value in data.items():
-            dev = normalize_device(dev)
-            cards.add(dev)
-            for hashmode, speed in value.items():
-                writer.writerow([dev, hashmode, speed])
+        for bm, d in data_ohc.items():
+            for dev, value in d.items():
+                for hashmode, speed in value.items():
+                    writer.writerow([dev, hashmode, speed])
+        for bm, d in data_gists.items():
+            for dev, value in d.items():
+                for hashmode, speed in value.items():
+                    writer.writerow([dev, hashmode, speed])
 
-    log.info(f"I've got these cards: {cards}")
+    new_stats = consolidate_stats([data_ohc, data_gists])
+    log.info(json.dumps(new_stats, indent=2))
+    cards = set()
+
+    # log.info(f"I've got these cards: {cards}")
     azure = AzureScraper(proxy, proxies, cards)
     azure_data = azure.crawl()
     with click.open_file(azure_output_file, "w") as f:
