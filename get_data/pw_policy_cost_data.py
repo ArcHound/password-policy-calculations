@@ -10,7 +10,7 @@ import math
 from functools import update_wrapper
 from benchmarks import OHCScraper, GistScraper, consolidate_stats
 from azure import AzureScraper
-from utils import normalize_device
+from utils import normalize_device, cards_list
 import cProfile
 import pstats
 
@@ -132,10 +132,9 @@ def main(benchmark_output_file, azure_output_file, proxy, proxy_address, log_lev
 
     new_stats = consolidate_stats([data_ohc, data_gists])
     log.info(json.dumps(new_stats, indent=2))
-    cards = set()
 
     # log.info(f"I've got these cards: {cards}")
-    azure = AzureScraper(proxy, proxies, cards)
+    azure = AzureScraper(proxy, proxies, cards_list)
     azure_data = azure.crawl()
     with click.open_file(azure_output_file, "w") as f:
         headers = ["sku", "device", "price", "time unit"]

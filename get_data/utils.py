@@ -1,119 +1,29 @@
+card_mapping = {
+    "A100": ["A100-PCIE-40GB", "A100-SXM4-40GB"],
+    "H100": ["NVIDIA H100 PCIe"],
+    "V100": ["Tesla V100-SXM2-16GB"],
+    "P100": ["Tesla P100-PCIE-16GB"],
+    "T4": ["Tesla T4"],
+    "A5000": ["NVIDIA RTX A5000"],
+    "GTX 1080 Ti": ["GeForce GTX 1080 Ti", "NVIDIA GeForce GTX 1080 Ti"],
+    "RTX 2070": ["GeForce RTX 2070 SUPER", "NVIDIA GeForce RTX 2070 SUPER"],
+    "RTX 2080 Ti": ["GeForce RTX 2080 Ti", "NVIDIA GeForce RTX 2080 Ti"],
+    "RTX 3080": ["GeForce RTX 3080", "NVIDIA GeForce RTX 3080"],
+    "RTX 3080 Ti": ["GeForce RTX 3080 Ti", "NVIDIA GeForce RTX 3080 Ti"],
+    "RTX 3090": ["GeForce RTX 3090", "NVIDIA GeForce RTX 3090"],
+    "RTX 3090 Ti": ["GeForce RTX 3090 Ti", "NVIDIA GeForce RTX 3090 Ti"],
+    "RTX 4090": ["GeForce RTX 4090", "NVIDIA GeForce RTX 4090"],
+    "RTX 4090 Ti": ["GeForce RTX 4090 Ti", "NVIDIA GeForce RTX 4090 Ti"],
+}
+
+cards_list = list(card_mapping.keys())
+
+
 def normalize_device(device):
-    # to the best of my knowledge, this should work
-    cards = {
-        "A100": ["A100-PCIE-40GB", "A100-SXM4-40GB"],
-        "H100": ["NVIDIA H100 PCIe"],
-        "V100": ["Tesla V100-SXM2-16GB"],
-        "P100": ["Tesla P100-PCIE-16GB"],
-        "T4": ["Tesla T4"],
-        "A5000": ["NVIDIA RTX A5000"],
-        "GTX 1080 Ti": ["GeForce GTX 1080 Ti", "NVIDIA GeForce GTX 1080 Ti"],
-        "RTX 2070": ["GeForce RTX 2070 SUPER", "NVIDIA GeForce RTX 2070 SUPER"],
-        "RTX 2080 Ti": ["GeForce RTX 2080 Ti", "NVIDIA GeForce RTX 2080 Ti"],
-        "RTX 3080": ["GeForce RTX 3080", "NVIDIA GeForce RTX 3080"],
-        "RTX 3080 Ti": ["GeForce RTX 3080 Ti", "NVIDIA GeForce RTX 3080 Ti"],
-        "RTX 3090": ["GeForce RTX 3090", "NVIDIA GeForce RTX 3090"],
-        "RTX 3090 Ti": ["GeForce RTX 3090 Ti", "NVIDIA GeForce RTX 3090 Ti"],
-        "RTX 4090": ["GeForce RTX 4090", "NVIDIA GeForce RTX 4090"],
-        "RTX 4090 Ti": ["GeForce RTX 4090 Ti", "NVIDIA GeForce RTX 4090 Ti"],
-    }
-    # hack for card searching
     if "#" in device:
         new_dev = device.split(" #")[0]
     else:
         new_dev = device
-    for c in cards:
-        if new_dev in cards[c]:
+    for c in card_mapping:
+        if new_dev in card_mapping[c]:
             return c
-
-
-cards_2 = [
-    "NVIDIA GeForce RTX 4090 #1",
-    "NVIDIA GeForce RTX 4090 #2",
-    "NVIDIA GeForce RTX 4090 #3",
-    "NVIDIA GeForce RTX 4090 #4",
-    "NVIDIA GeForce RTX 4090 #5",
-    "NVIDIA GeForce RTX 4090 #6",
-    "NVIDIA GeForce RTX 4090 #7",
-    "NVIDIA GeForce RTX 4090 #8",
-    "NVIDIA GeForce RTX 3090 Ti #1",
-    "NVIDIA GeForce RTX 3090 #1",
-    "NVIDIA GeForce RTX 3090 #2",
-    "NVIDIA GeForce RTX 3090 #3",
-    "NVIDIA GeForce RTX 3090 #4",
-    "NVIDIA GeForce RTX 3090 #5",
-    "NVIDIA GeForce RTX 3090 #6",
-    "NVIDIA GeForce RTX 3090 #7",
-    "NVIDIA GeForce RTX 3090 #8",
-    "NVIDIA GeForce RTX 3090 #9",
-    "NVIDIA GeForce RTX 3090 #10",
-    "NVIDIA GeForce RTX 3090 #11",
-    "NVIDIA GeForce RTX 3090 #12",
-    "NVIDIA GeForce RTX 3090 #13",
-    "NVIDIA GeForce RTX 3090 #14",
-    "NVIDIA GeForce RTX 3080 Ti #1",
-    "NVIDIA GeForce RTX 3080 #1",
-    "NVIDIA RTX A5000 #1",
-    "NVIDIA RTX A5000 #2",
-    "NVIDIA RTX A5000 #3",
-    "NVIDIA RTX A5000 #4",
-    "NVIDIA RTX A5000 #5",
-    "NVIDIA RTX A5000 #6",
-    "NVIDIA RTX A5000 #7",
-    "NVIDIA RTX A5000 #8",
-    "GeForce RTX 2080 Ti #1",
-    "GeForce RTX 2080 Ti #2",
-    "GeForce RTX 2080 Ti #3",
-    "GeForce RTX 2080 Ti #4",
-    "GeForce RTX 2080 Ti #5",
-    "GeForce RTX 2080 Ti #6",
-    "GeForce GTX 1080 Ti #1",
-    "GeForce GTX 1080 Ti #2",
-    "GeForce GTX 1080 Ti #3",
-    "GeForce GTX 1080 Ti #4",
-    "GeForce GTX 1080 Ti #5",
-    "GeForce GTX 1080 Ti #6",
-    "GeForce GTX 1080 Ti #7",
-    "GeForce GTX 1080 Ti #8",
-    "GeForce GTX 1080 Ti #9",
-    "GeForce GTX 1080 Ti #10",
-    "GeForce RTX 2070 SUPER #1",
-    "GeForce RTX 2070 SUPER #2",
-    "GeForce RTX 2070 SUPER #3",
-    "GeForce RTX 2070 SUPER #4",
-    "GeForce RTX 2070 SUPER #5",
-    "GeForce RTX 2070 SUPER #6",
-    "GeForce RTX 2070 SUPER #7",
-    "GeForce RTX 2070 SUPER #8",
-    "Tesla T4 #1",
-    "Tesla P100-PCIE-16GB #1",
-    "Tesla V100-SXM2-16GB #1",
-    "Tesla V100-SXM2-16GB #2",
-    "Tesla V100-SXM2-16GB #3",
-    "Tesla V100-SXM2-16GB #4",
-    "A100-SXM4-40GB #1",
-    "Apple M3 Pro #1",
-    "Apple M3 Pro #1",
-    "NVIDIA H100 PCIe #1",
-    "NVIDIA Tegra X1 #1",
-    "NVIDIA GeForce RTX 4090 #1",
-    "Apple M1 Ultra #1",
-    "A100-PCIE-40GB #1",
-    "A100-PCIE-40GB #2",
-    "A100-PCIE-40GB #3",
-    "A100-PCIE-40GB #4",
-    "GeForce RTX 3090 #1",
-    "GeForce RTX 3080 #1",
-    "TITAN RTX #1",
-    "TITAN RTX #1",
-    "Intel(R) Core(TM) i7-6700K CPU @ 4.00GHz #1",
-    "Tesla V100-SXM2-16GB #1",
-    "Tesla V100-SXM2-16GB #2",
-    "Tesla V100-SXM2-16GB #3",
-    "Tesla V100-SXM2-16GB #4",
-]
-
-if __name__ == "__main__":
-    for c in cards_2:
-        print(c)
-        print(normalize_device(c))

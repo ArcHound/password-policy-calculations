@@ -52,7 +52,8 @@ class AzureScraper:
         for link in links:
             try:
                 log.debug(link)
-                stats = self.parse_vm_details(link)
+                text_r = self.azure_session.get(self.base_url + link)
+                stats = self.parse_vm_details(text_r.text)
                 self.pricing_reqs += stats
             except Exception as e:
                 log.error(f"Bad scrape of {link} - {e}")
@@ -80,16 +81,15 @@ class AzureScraper:
 
         return full_data
 
-    def parse_vm_details(self, link):
-        text_r = self.azure_session.get(self.base_url + link)
-        text = BeautifulSoup(text_r.text, "html.parser")
+    def parse_vm_details(self, text_r):
+        text = BeautifulSoup(text_r, "html.parser")
         content = text.find("main")
         header = [x.string for x in content.find("table").find("thead").find_all("th")]
         row_index = header.index("GPU")
         table = content.find("table").find("tbody")
         gpu_type = ""
         for card in self.cards:
-            if card in text_r.text:
+            if card in text_r:
                 log.debug(card)
                 gpu_type = card
         if gpu_type == "":
