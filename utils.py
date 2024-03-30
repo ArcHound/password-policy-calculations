@@ -27,3 +27,15 @@ def normalize_device(device):
     for c in card_mapping:
         if new_dev in card_mapping[c]:
             return c
+
+
+charset_lenghts = {
+    "lowercase": 26,
+    "lowercase+uppercase": 52,
+    "lowercase+uppercase+number": 62,
+    "ascii_printable": 95,
+}
+
+
+def calculate_policy_size(charset_len, password_len):
+    return pow(charset_len, password_len)
