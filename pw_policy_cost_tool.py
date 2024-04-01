@@ -219,7 +219,7 @@ def get_cloud_data(azure_output_file, proxy, proxy_address, log_level):
 )
 @log_decorator
 @time_decorator
-def stats(benchmark_input_file, azure_input_file, pw_len, mode, log_level):
+def calc(benchmark_input_file, azure_input_file, pw_len, mode, log_level):
     """Compute the stats"""
     # ======================================================================
     #                        Your script starts here!
@@ -233,6 +233,7 @@ def stats(benchmark_input_file, azure_input_file, pw_len, mode, log_level):
     # log.debug(merged)
 
     policy_size = calculate_policy_size(charset_lenghts["ascii_printable"], pw_len)
+    log.info(f"Working with policy size {policy_size}")
 
     relevant_hashes = merged.loc[merged["hashmode"] == mode]
     # log.debug(relevant_hashes)
@@ -249,6 +250,131 @@ def stats(benchmark_input_file, azure_input_file, pw_len, mode, log_level):
             row["sku"], row["device"], round(row["policy_cost"], 3)
         )
     )
+    return 0
+
+
+@cli.command()
+@click.option(
+    "--benchmark-input-file",
+    help="Benchmark data input file",
+    type=click.Path(readable=True, file_okay=True, dir_okay=False),
+    default="./data/benchmark.csv",
+)
+@click.option(
+    "--azure-input-file",
+    help="Azure costs input file",
+    type=click.Path(readable=True, file_okay=True, dir_okay=False),
+    default="./data/azure.csv",
+)
+@click.option(
+    "--hashmode-input-file",
+    help="CSV with hashcat hashmodes map",
+    type=click.Path(readable=True, file_okay=True, dir_okay=False),
+    default="./data/modes.csv",
+)
+@click.option(
+    "--log-level",
+    default="WARNING",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    show_default=True,
+    help="Set logging level.",
+    envvar="LOG_LEVEL",
+)
+@log_decorator
+@time_decorator
+def stats(benchmark_input_file, azure_input_file, hashmode_input_file, log_level):
+    """Compute the stats"""
+    # ======================================================================
+    #                        Your script starts here!
+    # ======================================================================
+    benchmark = pd.read_csv(benchmark_input_file)
+    benchmark["device"] = benchmark["device"].apply(normalize_device)
+    # log.debug(benchmark)
+    azure_data = pd.read_csv(azure_input_file)
+    # log.debug(azure_data)
+    merged = pd.merge(benchmark, azure_data, how="right", on=["device"])
+    # log.debug(merged)
+
+    hashmode_map = dict()
+    with open(hashmode_input_file) as f:
+        reader = csv.reader(f, delimiter=";")
+        for row in reader:
+            hashmode_map[row[0]] = row[1]
+
+    # Different hashes on pw_len 8
+    click.echo("Different hashes on password length 8")
+    policy_size = calculate_policy_size(charset_lenghts["ascii_printable"], 8)
+    hashmodes = [0, 10, 100, 1000, 1400, 3200, 8900]
+    mapped = [hashmode_map[str(h)] for h in hashmodes]
+    prices = list()
+
+    for h in hashmodes:
+        relevant_hashes = merged.loc[merged["hashmode"] == h]
+        # log.debug(relevant_hashes)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore")
+            relevant_hashes["policy_cost"] = (
+                policy_size / relevant_hashes["speed"] / 3600 * relevant_hashes["price"]
+            )
+        # log.debug(relevant_hashes)
+        index = relevant_hashes["policy_cost"].idxmin()
+        row = relevant_hashes.loc[index]
+
+        prices.append(str(round(row["policy_cost"], 3)) + "$")
+    results = pd.DataFrame(
+        {"Hashmode": hashmodes, "Hash": mapped, "Cracking price": prices}
+    )
+    click.echo(results.to_markdown())
+    click.echo("")
+
+    # MD5 on password lenghts
+    click.echo("MD5 on password lengths from 6")
+    pw_lens = range(6, 16)
+    prices = list()
+
+    for p in pw_lens:
+        policy_size = calculate_policy_size(charset_lenghts["ascii_printable"], p)
+        relevant_hashes = merged.loc[merged["hashmode"] == 0]
+        # log.debug(relevant_hashes)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore")
+            relevant_hashes["policy_cost"] = (
+                policy_size / relevant_hashes["speed"] / 3600 * relevant_hashes["price"]
+            )
+        # log.debug(relevant_hashes)
+        index = relevant_hashes["policy_cost"].idxmin()
+        row = relevant_hashes.loc[index]
+
+        prices.append(str(round(row["policy_cost"], 3)) + "$")
+    results = pd.DataFrame({"Password length": pw_lens, "Cracking price": prices})
+    click.echo(results.to_markdown())
+    click.echo("")
+
+    # charsets on MD5 len 12
+    click.echo("Different charsets on MD5, password length 12")
+    charsets = list(charset_lenghts.keys())
+    cs_lens = [charset_lenghts[x] for x in charsets]
+    prices = list()
+
+    for c in cs_lens:
+        policy_size = calculate_policy_size(c, 12)
+        relevant_hashes = merged.loc[merged["hashmode"] == 0]
+        # log.debug(relevant_hashes)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore")
+            relevant_hashes["policy_cost"] = (
+                policy_size / relevant_hashes["speed"] / 3600 * relevant_hashes["price"]
+            )
+        # log.debug(relevant_hashes)
+        index = relevant_hashes["policy_cost"].idxmin()
+        row = relevant_hashes.loc[index]
+
+        prices.append(str(round(row["policy_cost"], 3)) + "$")
+    results = pd.DataFrame(
+        {"Charset": charsets, "Charset lenght": cs_lens, "Cracking price": prices}
+    )
+    click.echo(results.to_markdown())
+    click.echo("")
     return 0
 
 

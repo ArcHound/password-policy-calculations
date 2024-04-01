@@ -30,6 +30,7 @@ def normalize_device(device):
 
 
 charset_lenghts = {
+    "numbers": 10,
     "lowercase": 26,
     "lowercase+uppercase": 52,
     "lowercase+uppercase+number": 62,
@@ -38,4 +39,4 @@ charset_lenghts = {
 
 
 def calculate_policy_size(charset_len, password_len):
-    return pow(charset_len, password_len)
+    return pow(float(charset_len), password_len)
