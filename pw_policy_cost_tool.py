@@ -328,7 +328,30 @@ def stats(benchmark_input_file, azure_input_file, hashmode_input_file, log_level
     click.echo("")
 
     # MD5 on password lenghts
-    click.echo("MD5 on password lengths from 6")
+    click.echo("MD5 on password lengths (lower) from 6")
+    pw_lens = range(6, 16)
+    prices = list()
+
+    for p in pw_lens:
+        policy_size = calculate_policy_size(charset_lenghts["lowercase"], p)
+        relevant_hashes = merged.loc[merged["hashmode"] == 0]
+        # log.debug(relevant_hashes)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore")
+            relevant_hashes["policy_cost"] = (
+                policy_size / relevant_hashes["speed"] / 3600 * relevant_hashes["price"]
+            )
+        # log.debug(relevant_hashes)
+        index = relevant_hashes["policy_cost"].idxmin()
+        row = relevant_hashes.loc[index]
+
+        prices.append(str(round(row["policy_cost"], 3)) + "$")
+    results = pd.DataFrame({"Password length": pw_lens, "Cracking price": prices})
+    click.echo(results.to_markdown())
+    click.echo("")
+
+    # MD5 on password lenghts
+    click.echo("MD5 on password lengths (lower, upper, nums, symbols) from 6")
     pw_lens = range(6, 16)
     prices = list()
 
