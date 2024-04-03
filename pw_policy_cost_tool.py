@@ -198,6 +198,12 @@ def get_cloud_data(azure_output_file, proxy, proxy_address, log_level):
     default="./data/azure.csv",
 )
 @click.option(
+    "--hashmode-input-file",
+    help="CSV with hashcat hashmodes map",
+    type=click.Path(readable=True, file_okay=True, dir_okay=False),
+    default="./data/modes.csv",
+)
+@click.option(
     "--pw-len",
     help="Length of the password",
     type=int,
@@ -210,6 +216,12 @@ def get_cloud_data(azure_output_file, proxy, proxy_address, log_level):
     default=0,
 )
 @click.option(
+    "--charset-length",
+    help="Length of character set.",
+    type=int,
+    default=95,
+)
+@click.option(
     "--log-level",
     default="WARNING",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
@@ -219,7 +231,15 @@ def get_cloud_data(azure_output_file, proxy, proxy_address, log_level):
 )
 @log_decorator
 @time_decorator
-def calc(benchmark_input_file, azure_input_file, pw_len, mode, log_level):
+def calc(
+    benchmark_input_file,
+    azure_input_file,
+    hashmode_input_file,
+    pw_len,
+    mode,
+    charset_length,
+    log_level,
+):
     """Compute the stats"""
     # ======================================================================
     #                        Your script starts here!
@@ -232,7 +252,13 @@ def calc(benchmark_input_file, azure_input_file, pw_len, mode, log_level):
     merged = pd.merge(benchmark, azure_data, how="right", on=["device"])
     # log.debug(merged)
 
-    policy_size = calculate_policy_size(charset_lenghts["ascii_printable"], pw_len)
+    hashmode_map = dict()
+    with open(hashmode_input_file) as f:
+        reader = csv.reader(f, delimiter=";")
+        for row in reader:
+            hashmode_map[row[0]] = row[1]
+
+    policy_size = calculate_policy_size(charset_length, pw_len)
     log.info(f"Working with policy size {policy_size}")
 
     relevant_hashes = merged.loc[merged["hashmode"] == mode]
@@ -245,6 +271,9 @@ def calc(benchmark_input_file, azure_input_file, pw_len, mode, log_level):
     # log.debug(relevant_hashes)
     index = relevant_hashes["policy_cost"].idxmin()
     row = relevant_hashes.loc[index]
+    click.echo(
+        f"We are cracking password length {pw_len} with charset of length {charset_length}, on mode {mode} - that's {hashmode_map[str(mode)]}"
+    )
     click.echo(
         "The cheapest option is {} with GPU {} - total cost {}$".format(
             row["sku"], row["device"], round(row["policy_cost"], 3)
