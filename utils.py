@@ -37,6 +37,14 @@ charset_lenghts = {
     "ascii_printable": 95,
 }
 
+charset_chars = {
+    "numbers": "0123456789",
+    "lowercase": "abcdefghijklmnopqrstuvwxyz",
+    "lowercase+uppercase": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "lowercase+uppercase+number": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+    "ascii_printable": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~",
+}
+
 
 def calculate_policy_size(charset_len, password_len):
     return pow(float(charset_len), password_len)

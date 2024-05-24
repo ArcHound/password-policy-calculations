@@ -1,23 +1,33 @@
 #!/usr/bin/env python3
 
+import base64
 import os
 import json
 import csv
+import hashlib
 import logging
 import sys
 import time
 import math
+import random
 import warnings
 from functools import update_wrapper
 from benchmarks.benchmarks import OHCScraper, GistScraper, consolidate_stats
 from cloud.azure import AzureScraper
-from utils import normalize_device, cards_list, charset_lenghts, calculate_policy_size
+from utils import (
+    normalize_device,
+    cards_list,
+    charset_lenghts,
+    charset_chars,
+    calculate_policy_size,
+)
 import cProfile
 import pandas as pd
 import pstats
 
 import click
 from dotenv import load_dotenv
+from pathlib import Path
 import requests
 import requests_cache
 
@@ -428,6 +438,92 @@ def stats(benchmark_input_file, azure_input_file, hashmode_input_file, log_level
     click.echo(results.to_markdown())
     click.echo("")
     return 0
+
+
+@cli.command()
+@click.option(
+    "--experiment-dir",
+    default="./experiment",
+    type=click.Path(dir_okay=True, file_okay=False, writable=True),
+    help="Directory to generate the hashes and passwords to",
+)
+@click.option(
+    "--log-level",
+    default="WARNING",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    show_default=True,
+    help="Set logging level.",
+    envvar="LOG_LEVEL",
+)
+@log_decorator
+@time_decorator
+def gen_experiment(experiment_dir, log_level):
+    """Generate files for running the cracking experiment"""
+    # ======================================================================
+    #                        Your script starts here!
+    # ======================================================================
+    experiments = [
+        {"mode": 0, "len": 8, "charset": "ascii_printable", "full": True},
+        {"mode": 0, "len": 11, "charset": "lowercase", "full": True},
+        {"mode": 100, "len": 7, "charset": "ascii_printable", "full": True},
+        {"mode": 1400, "len": 7, "charset": "ascii_printable", "full": True},
+        {"mode": 1410, "len": 7, "charset": "ascii_printable", "full": True},
+        {"mode": 1700, "len": 7, "charset": "ascii_printable", "full": True},
+        {"mode": 8900, "len": 5, "charset": "ascii_printable", "full": True},
+        {"mode": 0, "len": 4, "charset": "ascii_printable", "full": False},
+        {"mode": 0, "len": 5, "charset": "lowercase", "full": False},
+        {"mode": 100, "len": 3, "charset": "ascii_printable", "full": False},
+        {"mode": 1400, "len": 3, "charset": "ascii_printable", "full": False},
+        {"mode": 1410, "len": 3, "charset": "ascii_printable", "full": False},
+        {"mode": 1700, "len": 3, "charset": "ascii_printable", "full": False},
+        {"mode": 8900, "len": 2, "charset": "ascii_printable", "full": False},
+    ]  # normally, I'd use dataclasses, but today I couldn't be bothered
+
+    hashmodehashmap = {
+        0: {"f": "md5", "salt": False},
+        100: {"f": "sha1", "salt": False},
+        1400: {"f": "sha256", "salt": False},
+        1410: {"f": "sha256", "salt": True},
+        1700: {"f": "sha512", "salt": False},
+        8900: {"f": "scrypt", "salt": True},
+    }
+
+    hashmaphashmap = {
+        "md5": hashlib.md5,
+        "sha1": hashlib.sha1,
+        "sha256": hashlib.sha256,
+        "sha512": hashlib.sha512,
+        "scrypt": hashlib.scrypt,
+    }  # it's a hashmap mapping hashes. I found it funny.
+
+    for e in experiments:
+        password = "".join(
+            random.choice(charset_chars[e["charset"]]) for i in range(e["len"])
+        ).encode()
+
+        func_name = hashmodehashmap[e["mode"]]["f"]
+        has_salt = hashmodehashmap[e["mode"]]["salt"]
+        func = hashmaphashmap[func_name]
+        salt = "deadbeef".encode()
+
+        final_hash = ""
+        if not has_salt:
+            final_hash = func(password).hexdigest()
+        elif e["mode"] == 1410:
+            final_hash = func(password + salt).hexdigest() + ":" + salt.decode()
+        elif e["mode"] == 8900:
+            scrypt_hash = base64.b64encode(func(password, salt=salt, n=1024, r=1, p=1))
+            s_salt = base64.b64encode(salt)
+            final_hash = f"SCRYPT:1024:1:1:{s_salt.decode()}:{scrypt_hash.decode()}"
+
+        dname = "full" if e["full"] else "halved"
+        outdir = Path(experiment_dir) / dname
+        fname = "hash_{}_len{}_{}.txt".format(e["mode"], e["len"], e["charset"])
+        outfile = outdir / fname
+        outfile.parent.mkdir(exist_ok=True, parents=True)
+
+        with open(outfile, "w") as f:
+            f.write(final_hash)
 
 
 if __name__ == "__main__":
