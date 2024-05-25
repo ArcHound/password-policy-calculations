@@ -5,6 +5,7 @@ import os
 import json
 import csv
 import hashlib
+from passlib.hash import scrypt
 import logging
 import sys
 import time
@@ -515,9 +516,16 @@ def gen_experiment(experiment_dir, log_level):
         elif e["mode"] == 1410:
             final_hash = func(password + salt).hexdigest() + ":" + salt.decode()
         elif e["mode"] == 8900:
-            scrypt_hash = base64.b64encode(func(password, salt=salt, n=1024, r=1, p=1))
-            s_salt = base64.b64encode(salt)
-            final_hash = f"SCRYPT:1024:1:1:{s_salt.decode()}:{scrypt_hash.decode()}"
+            # scrypt is weird AF man
+            # for some reason the hashlib threw a format error in hashcat
+            scrypt_hash = scrypt.using(rounds=10, block_size=1, parallelism=1).hash(
+                password
+            )
+            # more weirdness - basically transform that format into the result
+            s, params, s_salt, digest = scrypt_hash[1:].replace("$", ":").split(":")
+            ln, r, p = params.split(",")
+            # this would probably fail for a different sized password, but not salt as salt is default
+            final_hash = f"{s.upper()}:{pow(2,int(ln.split('=')[1]))}:{r.split('=')[1]}:{p.split('=')[1]}:{s_salt}==:{digest}="  # brb washing my eyes and hands with bleach (doubt it'd help)
 
         dname = "full" if e["full"] else "halved"
         outdir = Path(experiment_dir) / dname
