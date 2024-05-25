@@ -12,6 +12,7 @@ import math
 import random
 import warnings
 from functools import update_wrapper
+from collections import defaultdict
 from benchmarks.benchmarks import OHCScraper, GistScraper, consolidate_stats
 from cloud.azure import AzureScraper
 from utils import (
@@ -496,6 +497,8 @@ def gen_experiment(experiment_dir, log_level):
         "scrypt": hashlib.scrypt,
     }  # it's a hashmap mapping hashes. I found it funny.
 
+    answers = defaultdict(list)
+
     for e in experiments:
         password = "".join(
             random.choice(charset_chars[e["charset"]]) for i in range(e["len"])
@@ -518,12 +521,21 @@ def gen_experiment(experiment_dir, log_level):
 
         dname = "full" if e["full"] else "halved"
         outdir = Path(experiment_dir) / dname
-        fname = "hash_{}_len{}_{}.txt".format(e["mode"], e["len"], e["charset"])
+        fname = "hash_{}_len{}_{}.txt".format(
+            e["mode"], e["len"], e["charset"].replace("_", "-")
+        )
         outfile = outdir / fname
         outfile.parent.mkdir(exist_ok=True, parents=True)
 
         with open(outfile, "w") as f:
             f.write(final_hash)
+
+        answers[dname].append(f"{final_hash}:{password.decode()}")
+
+    for k in answers:
+        with open(Path(experiment_dir) / k / "answers.log", "w") as f:
+            for a in answers[k]:
+                f.write(a + "\n")
 
 
 if __name__ == "__main__":
