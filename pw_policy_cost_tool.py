@@ -280,7 +280,7 @@ def calc(
         relevant_hashes["policy_cost"] = (
             policy_size / relevant_hashes["speed"] / 3600 * relevant_hashes["price"]
         )
-    # log.debug(relevant_hashes)
+    log.debug(relevant_hashes)
     index = relevant_hashes["policy_cost"].idxmin()
     row = relevant_hashes.loc[index]
     click.echo(
