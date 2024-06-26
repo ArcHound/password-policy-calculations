@@ -1,3 +1,5 @@
+import warnings
+
 card_mapping = {
     "A100": ["A100-PCIE-40GB", "A100-SXM4-40GB"],
     "H100": ["NVIDIA H100 PCIe"],
@@ -48,3 +50,13 @@ charset_chars = {
 
 def calculate_policy_size(charset_len, password_len):
     return pow(float(charset_len), password_len)
+
+
+def enrich_cost_time(data, policy_size):
+    with warnings.catch_warnings():
+        warnings.simplefilter(action="ignore")
+        data["policy_cost"] = policy_size / data["speed"] / 3600 * data["price"]
+        data["policy_time (s)"] = policy_size / data["speed"]
+        data["policy_time (h)"] = policy_size / data["speed"] / 3600
+
+    return data

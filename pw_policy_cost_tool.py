@@ -22,6 +22,7 @@ from utils import (
     charset_lenghts,
     charset_chars,
     calculate_policy_size,
+    enrich_cost_time,
 )
 import cProfile
 import pandas as pd
@@ -228,6 +229,12 @@ def get_cloud_data(azure_output_file, proxy, proxy_address, log_level):
     default=0,
 )
 @click.option(
+    "--sku",
+    help="Specific VM configuration to use (Azure SKUs) - if set to cheapest, it'd calculate the cheapest version",
+    type=str,
+    default="cheapest",
+)
+@click.option(
     "--charset-length",
     help="Length of character set.",
     type=int,
@@ -249,6 +256,7 @@ def calc(
     hashmode_input_file,
     pw_len,
     mode,
+    sku,
     charset_length,
     log_level,
 ):
@@ -275,22 +283,34 @@ def calc(
 
     relevant_hashes = merged.loc[merged["hashmode"] == mode]
     # log.debug(relevant_hashes)
-    with warnings.catch_warnings():
-        warnings.simplefilter(action="ignore")
-        relevant_hashes["policy_cost"] = (
-            policy_size / relevant_hashes["speed"] / 3600 * relevant_hashes["price"]
-        )
+    relevant_hashes = enrich_cost_time(relevant_hashes, policy_size)
     log.debug(relevant_hashes)
-    index = relevant_hashes["policy_cost"].idxmin()
-    row = relevant_hashes.loc[index]
     click.echo(
         f"We are cracking password length {pw_len} with charset of length {charset_length}, on mode {mode} - that's {hashmode_map[str(mode)]}"
     )
-    click.echo(
-        "The cheapest option is {} with GPU {} - total cost {}$".format(
-            row["sku"], row["device"], round(row["policy_cost"], 3)
+    if sku == "cheapest":
+        index = relevant_hashes["policy_cost"].idxmin()
+        row = relevant_hashes.loc[index]
+        click.echo(
+            "The cheapest option is {} with GPU {} - total cost {}$ and time {}s".format(
+                row["sku"],
+                row["device"],
+                round(row["policy_cost"], 3),
+                round(row["policy_time"], 3),
+            )
         )
-    )
+    else:
+        sku_hashes = relevant_hashes.loc[relevant_hashes["sku"] == sku]
+        index = sku_hashes["policy_cost"].idxmin()
+        row = sku_hashes.loc[index]
+        click.echo(
+            "With SKU {} and GPU {} the total cost is {}$ and time {}s".format(
+                sku,
+                row["device"],
+                round(row["policy_cost"], 3),
+                round(row["policy_time"], 3),
+            )
+        )
     return 0
 
 
@@ -351,12 +371,7 @@ def stats(benchmark_input_file, azure_input_file, hashmode_input_file, log_level
 
     for h in hashmodes:
         relevant_hashes = merged.loc[merged["hashmode"] == h]
-        # log.debug(relevant_hashes)
-        with warnings.catch_warnings():
-            warnings.simplefilter(action="ignore")
-            relevant_hashes["policy_cost"] = (
-                policy_size / relevant_hashes["speed"] / 3600 * relevant_hashes["price"]
-            )
+        relevant_hashes = enrich_cost_time(relevant_hashes, policy_size)
         # log.debug(relevant_hashes)
         index = relevant_hashes["policy_cost"].idxmin()
         row = relevant_hashes.loc[index]
@@ -377,12 +392,7 @@ def stats(benchmark_input_file, azure_input_file, hashmode_input_file, log_level
         policy_size = calculate_policy_size(charset_lenghts["lowercase"], p)
         relevant_hashes = merged.loc[merged["hashmode"] == 0]
         # log.debug(relevant_hashes)
-        with warnings.catch_warnings():
-            warnings.simplefilter(action="ignore")
-            relevant_hashes["policy_cost"] = (
-                policy_size / relevant_hashes["speed"] / 3600 * relevant_hashes["price"]
-            )
-        # log.debug(relevant_hashes)
+        relevant_hashes = enrich_cost_time(relevant_hashes, policy_size)
         index = relevant_hashes["policy_cost"].idxmin()
         row = relevant_hashes.loc[index]
 
@@ -399,12 +409,7 @@ def stats(benchmark_input_file, azure_input_file, hashmode_input_file, log_level
     for p in pw_lens:
         policy_size = calculate_policy_size(charset_lenghts["ascii_printable"], p)
         relevant_hashes = merged.loc[merged["hashmode"] == 0]
-        # log.debug(relevant_hashes)
-        with warnings.catch_warnings():
-            warnings.simplefilter(action="ignore")
-            relevant_hashes["policy_cost"] = (
-                policy_size / relevant_hashes["speed"] / 3600 * relevant_hashes["price"]
-            )
+        relevant_hashes = enrich_cost_time(relevant_hashes, policy_size)
         # log.debug(relevant_hashes)
         index = relevant_hashes["policy_cost"].idxmin()
         row = relevant_hashes.loc[index]
@@ -423,12 +428,7 @@ def stats(benchmark_input_file, azure_input_file, hashmode_input_file, log_level
     for c in cs_lens:
         policy_size = calculate_policy_size(c, 12)
         relevant_hashes = merged.loc[merged["hashmode"] == 0]
-        # log.debug(relevant_hashes)
-        with warnings.catch_warnings():
-            warnings.simplefilter(action="ignore")
-            relevant_hashes["policy_cost"] = (
-                policy_size / relevant_hashes["speed"] / 3600 * relevant_hashes["price"]
-            )
+        relevant_hashes = enrich_cost_time(relevant_hashes, policy_size)
         # log.debug(relevant_hashes)
         index = relevant_hashes["policy_cost"].idxmin()
         row = relevant_hashes.loc[index]
@@ -439,6 +439,28 @@ def stats(benchmark_input_file, azure_input_file, hashmode_input_file, log_level
     )
     click.echo(results.to_markdown())
     click.echo("")
+
+    # experiments estimates
+    sku = "Standard_NC6s_v3"
+    experiments = [
+        {"mode": 0, "len": 8, "charset": "ascii_printable", "full": True},
+        {"mode": 0, "len": 11, "charset": "lowercase", "full": True},
+        {"mode": 100, "len": 7, "charset": "ascii_printable", "full": True},
+        {"mode": 1400, "len": 7, "charset": "ascii_printable", "full": True},
+        {"mode": 1410, "len": 7, "charset": "ascii_printable", "full": True},
+        {"mode": 1700, "len": 7, "charset": "ascii_printable", "full": True},
+        {"mode": 8900, "len": 5, "charset": "ascii_printable", "full": True},
+    ]
+    table = list()
+    for exp in experiments:
+        policy_size = calculate_policy_size(charset_lenghts[exp["charset"]], exp["len"])
+        relevant_hashes = merged.loc[merged["hashmode"] == exp["mode"]]
+        relevant_hashes = enrich_cost_time(relevant_hashes, policy_size)
+        sku_hashes = relevant_hashes.loc[relevant_hashes["sku"] == sku]
+        index = sku_hashes["policy_cost"].idxmin()
+        row = dict(sku_hashes.loc[index])
+        table.append(row)
+    click.echo(pd.DataFrame.from_dict(table).to_markdown())
     return 0
 
 

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+touch benchmark.txt
+# benchmark if we're halved
+if [ "$1" == "halved" ]; then
+	hashcat --benchmark > benchmark.txt
+fi
+
 # This is what I want to run on the VM
 
 for file in $(find $1 -name "*.txt"); do
@@ -29,9 +35,14 @@ for file in $(find $1 -name "*.txt"); do
 	# and run!
 	hashcat --quiet -o $file.cracked -O -a 3 -m $mode "$file" "$mask" 
 done;
+date +"%T.%6N"
 
 # shuffle the output files into one big file with answers
 for file in $(find $1 -name "*.cracked"); do
 	cat $file >> $1/cracked_answers.log
 	rm $file
 done;
+
+
+# display
+cat $1/cracked_answers.log $1/answers.log | sort | uniq -c 
